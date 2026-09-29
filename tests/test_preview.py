@@ -23,7 +23,8 @@ class Repo:
         root.mkdir()
         self.run("init", "-q", "--template=", "-b", "feature")
         for key, value in (("user.name", "Test"), ("user.email", "test@example.invalid"),
-                           ("core.autocrlf", "false"), ("core.filemode", "false")):
+                           ("core.autocrlf", "false"), ("core.filemode", "false"),
+                           ("gc.auto", "0"), ("maintenance.auto", "false")):
             self.run("config", key, value)
 
     def run(self, *args):
@@ -358,7 +359,7 @@ class PreviewTests(unittest.TestCase):
         actual_entries = core.index_entries
         def changing_entries(root, *args, **kwargs):
             result = actual_entries(root, *args, **kwargs)
-            if Path(root) == self.repo.root:
+            if Path(root).resolve() == self.repo.root.resolve():
                 self.repo.run("add", "code.py")
             return result
         with patch.object(core, "index_entries", side_effect=changing_entries):

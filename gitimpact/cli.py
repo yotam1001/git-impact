@@ -27,6 +27,8 @@ def demo_report(mode="hard"):
         run("config", "user.email", "demo@example.invalid")
         run("config", "core.autocrlf", "false")
         run("config", "core.filemode", "false")
+        run("config", "gc.auto", "0")
+        run("config", "maintenance.auto", "false")
         (root / "src").mkdir()
         (root / "src/invoice.py").write_text("def total(items):\n    return sum(items)\n", encoding="utf-8")
         (root / "README.md").write_text("# Invoice service\n\nA tiny demonstration project.\n", encoding="utf-8")

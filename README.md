@@ -114,7 +114,7 @@ python -m unittest discover -s tests -v
 python scripts/build_release.py
 ```
 
-Tests create disposable repositories, compare preview results with actual Git operations, and check source files and Git metadata remain unchanged. They include distinct staged/unstaged edits, intent-to-add, deleted files, ignored/untracked obstructions, linked worktrees, line endings, binary/Unicode names, concurrent edits, and refused unsupported states. CI is configured for Windows, Linux, and macOS, with Python 3.10 coverage on Linux. Only the Windows checks have been run locally so far.
+Tests create disposable repositories, compare preview results with actual Git operations, and check source files and Git metadata remain unchanged. They include distinct staged/unstaged edits, intent-to-add, deleted files, ignored/untracked obstructions, linked worktrees, line endings, binary/Unicode names, concurrent edits, and refused unsupported states. [CI](https://github.com/yotam1001/git-impact/actions/workflows/test.yml) verifies Windows, Linux, and macOS, with Python 3.10 coverage on Linux.
 
 The default build produces a `.pyz` zipapp and a ZIP with an offline demo, README, license, and SHA-256 checksum. To build a native executable in an isolated build environment:
 

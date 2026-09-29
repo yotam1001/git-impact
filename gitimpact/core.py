@@ -331,6 +331,8 @@ def preview(repo, target="HEAD", mode="mixed", max_copy_mib=256, max_files=20000
         git(sandbox, "init", "--quiet", "--template=" + str(empty),
             "--object-format=" + object_format, isolated=True)
         git(sandbox, "config", "core.logAllRefUpdates", "false", isolated=True)
+        git(sandbox, "config", "gc.auto", "0", isolated=True)
+        git(sandbox, "config", "maintenance.auto", "false", isolated=True)
         for key in ("core.autocrlf", "core.eol", "core.filemode", "core.ignorecase",
                     "core.protectntfs", "core.protecthfs", "core.symlinks", "core.checkstat",
                     "core.trustctime"):
