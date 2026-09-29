@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<title>Git Impact · git reset --hard HEAD~1</title><style>
+:root{color-scheme:light;--ink:#20221d;--muted:#6a6f63;--line:#dfe2d7;--green:#386944;--paper:#f8f9f3}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}
+.wrap{max-width:1080px;margin:auto;padding:38px 30px 65px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);padding-bottom:24px}
+.brand{font-size:19px;font-weight:750;letter-spacing:-.5px}.brand b{display:inline-grid;place-items:center;width:30px;height:30px;margin-right:10px;background:var(--ink);color:#eff6d9;border-radius:8px;font-size:18px}
+.badge{font-size:11px;letter-spacing:1.2px;font-weight:700;background:#e8efdf;color:var(--green);border:1px solid #d3dfc9;padding:5px 10px;border-radius:20px}
+.eyebrow{color:var(--muted);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-top:40px}h1{font-size:clamp(30px,5vw,46px);line-height:1.12;letter-spacing:-1.9px;margin:13px 0 16px;max-width:800px}
+.intro{color:var(--muted);max-width:730px;margin:0 0 24px}.command{background:var(--ink);color:#f5f6e9;border-radius:12px;padding:20px 24px;overflow:auto;font:16px/1.5 ui-monospace,Consolas,monospace}.command span{color:#b4c590;margin-right:15px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:23px 0 30px}.stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:19px 22px}.number{display:block;font-size:31px;line-height:1.2;font-weight:650;letter-spacing:-1px}.label{font-size:12px;color:var(--muted)}
+.meta{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:16px 0 26px}code{font-family:ui-monospace,Consolas,monospace}.meta code{color:var(--ink)}
+.tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}button{font:inherit;font-size:12px;border:1px solid var(--line);background:transparent;color:var(--muted);padding:8px 13px;border-radius:7px;cursor:pointer}button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:white}button:focus-visible,summary:focus-visible{outline:3px solid #95ab65;outline-offset:3px}
+.section{margin:25px 0}h2{font-size:18px;letter-spacing:-.3px;margin:0 0 3px}.description{color:var(--muted);font-size:13px;margin:0 0 14px}.change{background:#fff;border:1px solid var(--line);border-radius:10px;margin:9px 0;overflow:hidden}summary{display:flex;align-items:center;gap:13px;padding:15px 18px;cursor:pointer;list-style:none}summary::-webkit-details-marker{display:none}summary:before{content:'+';font:18px ui-monospace,monospace;color:var(--muted)}details[open] summary:before{content:'−'}.path{flex:1;overflow-wrap:anywhere;font:13px/1.5 ui-monospace,Consolas,monospace}.kind{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;padding:3px 7px;border-radius:4px;background:#edf0e5;white-space:nowrap}.kind.deleted{background:#f9e7df;color:#a34b30}.kind.modified{background:#f7eed4;color:#8b6c20}.obstruction{font-size:10px;color:#a34b30;font-weight:700}
+pre{margin:0;padding:18px 22px;border-top:1px solid var(--line);background:#f2f4ee;overflow:auto;font:12px/1.7 ui-monospace,Consolas,monospace;tab-size:4;max-height:480px}.empty{border:1px dashed var(--line);padding:16px 20px;border-radius:8px;color:var(--muted);font-size:13px}.commits{padding:15px 20px;background:#fff;border:1px solid var(--line);border-radius:10px;font-size:13px}.commit{margin:7px 0;overflow-wrap:anywhere}.commit code{color:var(--green);margin-right:12px}.notes{border-top:1px solid var(--line);margin-top:34px;padding-top:22px;font-size:12px;color:var(--muted)}.notes p{margin:6px 0}.footer{margin-top:20px;font-size:11px;color:var(--muted)}[hidden]{display:none!important}
+@media(max-width:600px){.wrap{padding:22px 18px}.stats{gap:8px}.stat{padding:13px}.number{font-size:26px}summary{gap:8px;padding:13px}.badge{font-size:9px}.obstruction{display:none}.command{font-size:13px;padding:16px}.top{align-items:flex-start}}
+@media(prefers-reduced-motion:no-preference){button{transition:background .12s}}
+</style></head>
+<body><main class="wrap"><header class="top"><div class="brand"><b aria-hidden="true">↗</b>Git Impact</div><span class="badge">READ-ONLY PREVIEW</span></header>
+<div class="eyebrow">sample-project / command preview</div><h1>Know what changes.<br>Before you run it.</h1>
+<p class="intro">Git ran this command in a temporary sandbox. Your source repository was left unchanged. Review the effects on each part of your repository below.</p>
+<div class="command"><span aria-hidden="true">$</span>git reset --hard HEAD~1</div>
+<div class="stats"><div class="stat"><span class="number">3</span><span class="label">staged files change</span></div><div class="stat"><span class="number">4</span><span class="label">files on disk change</span></div><div class="stat"><span class="number">1</span><span class="label">commits leave history</span></div></div><div class="meta"><span>Branch <code>feature/invoices</code></span><span>HEAD <code>1dca9cb7 → 124dd06b</code></span><span>Reset mode <code>hard</code></span></div>
+<nav class="tabs" aria-label="Report sections"><button type="button" data-view="all" aria-pressed="true">All effects</button><button type="button" data-view="staging" aria-pressed="false">Staging area</button><button type="button" data-view="working" aria-pressed="false">Working tree</button><button type="button" data-view="history" aria-pressed="false">History</button></nav>
+<section class="section" data-category="staging"><h2>Staging area</h2><p class="description">The versions staged for your next commit.</p><details class="change"><summary><span class="path">src/draft.py</span><span class="kind deleted">deleted</span></summary><pre>--- before/src/draft.py
++++ after/src/draft.py
+@@ -1,2 +0,0 @@
+-# Staged work that has never been committed
+-DRAFT_LIMIT = 25
+</pre></details><details class="change"><summary><span class="path">src/export.py</span><span class="kind deleted">deleted</span></summary><pre>--- before/src/export.py
++++ after/src/export.py
+@@ -1,2 +0,0 @@
+-def export(invoice):
+-    return str(invoice)
+</pre></details><details class="change"><summary><span class="path">src/invoice.py</span><span class="kind modified">modified</span></summary><pre>--- before/src/invoice.py
++++ after/src/invoice.py
+@@ -1,2 +1,2 @@
+-def total(items, tax=0.17):
+-    return round(sum(items) * (1 + tax), 2)
++def total(items):
++    return sum(items)
+</pre></details></section><section class="section" data-category="working"><h2>Working tree</h2><p class="description">The files on disk, including untracked obstructions.</p><details class="change"><summary><span class="path">README.md</span><span class="kind modified">modified</span></summary><pre>--- before/README.md
++++ after/README.md
+@@ -1,3 +1,3 @@
+ # Invoice service
+ 
+-Draft deployment instructions, not staged yet.
++A tiny demonstration project.
+</pre></details><details class="change"><summary><span class="path">src/draft.py</span><span class="kind deleted">deleted</span></summary><pre>--- before/src/draft.py
++++ after/src/draft.py
+@@ -1,2 +0,0 @@
+-# Staged work that has never been committed
+-DRAFT_LIMIT = 25
+</pre></details><details class="change"><summary><span class="path">src/export.py</span><span class="kind deleted">deleted</span></summary><pre>--- before/src/export.py
++++ after/src/export.py
+@@ -1,2 +0,0 @@
+-def export(invoice):
+-    return str(invoice)
+</pre></details><details class="change"><summary><span class="path">src/invoice.py</span><span class="kind modified">modified</span></summary><pre>--- before/src/invoice.py
++++ after/src/invoice.py
+@@ -1,3 +1,2 @@
+-def total(items, tax=0.18):
+-    # This newer version is not staged yet
+-    return round(sum(items) * (1 + tax), 2)
++def total(items):
++    return sum(items)
+</pre></details></section><section class="section" data-category="history"><h2>Current history</h2><p class="description">These commits leave this branch’s history. Other refs or the reflog may retain them.</p><div class="commits"><div class="commit"><code>1dca9cb7</code>Add export and round invoice totals</div></div></section><aside class="notes"><p><strong>Read the preview against the current state.</strong></p><p>This previews one observed state. Re-run if files, refs, or the index change.</p><p>Commits removed from this history may remain reachable elsewhere or in the reflog.</p><p>Only paths relevant to this reset are copied; unrelated untracked/ignored files are unchanged.</p></aside>
+<footer class="footer">Generated locally with Git Impact 0.1.0 · No account, API, or hosted service.</footer></main>
+<script>document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));document.querySelectorAll('[data-category]').forEach(s=>s.hidden=button.dataset.view!=='all'&&s.dataset.category!==button.dataset.view)}));</script></body></html>

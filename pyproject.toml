@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "git-impact"
+version = "0.1.0"
+description = "Preview Git reset effects on staged files, working files, and history without changing your repository"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+readme = "README.md"
+authors = [{name = "Git Impact contributors"}]
+dependencies = []
+classifiers = ["Programming Language :: Python :: 3", "Topic :: Software Development :: Version Control :: Git"]
+
+[project.scripts]
+git-impact = "gitimpact.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["gitimpact*"]
