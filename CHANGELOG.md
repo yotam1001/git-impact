@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0 — 2026-09-30
+
+- Distinguish affected staged/unstaged work and local deletions from target version changes; count affected paths once across staging and disk.
+- Add `--compare-modes` with actual soft/mixed/hard simulations for one target and checks for detected changes between snapshots.
+- Show an untracked export obstruction in the demo alongside native Git command output and an unrelated surviving note.
+- Explain when native Git diffs are sufficient, what they omit, and which reset modes preserve staging or disk files.
+- Keep local-work detection aware of Git line-ending normalization and file-mode settings.
+
 ## 0.1.0 — 2026-09-30
 
 - Preview reset in soft, mixed, and hard modes to local refs.

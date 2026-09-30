@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import difflib
 import hashlib
+import json
 import os
 from pathlib import Path, PurePosixPath
 import shutil
@@ -279,6 +280,9 @@ def preview(repo, target="HEAD", mode="mixed", max_copy_mib=256, max_files=20000
            for item in git(root, "ls-files", "-v", "-z").split(b"\0")):
         raise PreviewError("Skip-worktree and assume-unchanged index entries are not supported.")
     before_index = index_entries(root)
+    head_tree = tree_entries(root, head)
+    staged_paths = {name for name in before_index.keys() | head_tree.keys()
+                    if before_index.get(name) != head_tree.get(name)}
     target_tree = tree_entries(root, destination)
     for entry in list(before_index.values()) + list(target_tree.values()):
         if entry["mode"] not in ("100644", "100755"):
@@ -371,6 +375,11 @@ def preview(repo, target="HEAD", mode="mixed", max_copy_mib=256, max_files=20000
             refresh = git(sandbox, "update-index", "--refresh", isolated=True, check=False)
             if refresh.returncode not in (0, 1):
                 raise PreviewError(decode(refresh.stderr).strip() or "Could not refresh the sandbox stat cache.")
+        # Let Git honor line-ending normalization and filemode settings. Raw
+        # working bytes need not match a blob even when Git considers it clean.
+        unstaged_paths = {decode(name) for name in git(
+            sandbox, "diff-files", "--name-only", "--no-ext-diff", "--no-textconv", "-z",
+            isolated=True).split(b"\0") if name} if mode != "soft" else set()
         git(sandbox, "reset", "--" + mode, destination, isolated=True)
         after_index = index_entries(sandbox, isolated=True)
         after_work = inventory(sandbox, names, max_copy_mib * 1024 * 1024, max_files) if mode != "soft" else {}
@@ -384,6 +393,29 @@ def preview(repo, target="HEAD", mode="mixed", max_copy_mib=256, max_files=20000
                   "notes": ["This previews one observed state. Re-run if files, refs, or the index change.",
                             "Commits removed from this history may remain reachable elsewhere or in the reflog.",
                             "Only paths relevant to this reset are copied; unrelated untracked/ignored files are unchanged."]}
+        for change in result["index_changes"]:
+            change["local_work"] = ["staged changes replaced"] if change["path"] in staged_paths else []
+        for change in result["working_tree_changes"]:
+            name = change["path"]
+            labels = []
+            if not change["was_tracked"] and change["before"]:
+                labels.append("untracked obstruction replaced")
+            elif name in unstaged_paths:
+                labels.append("unstaged changes replaced" if change["before"] else "local deletion replaced")
+            elif name in staged_paths and change["before"]:
+                labels.append("staged content on disk replaced")
+            change["local_work"] = labels
+        result["local_work_paths"] = sorted({change["path"] for key in
+            ("index_changes", "working_tree_changes") for change in result[key] if change["local_work"]})
+        # Digests allow a multi-mode comparison to reject different observed
+        # states without exposing configuration values or attribute paths.
+        common_state = [head, destination, branch, hashlib.sha256(index_bytes or b"").hexdigest(),
+                        settings, [(str(path), hashlib.sha256(data).hexdigest() if data is not None else None)
+                                   for path, data in attribute_bytes]]
+        result["snapshot"] = {
+            "repository_state": hashlib.sha256(json.dumps(common_state, sort_keys=True).encode()).hexdigest(),
+            "working_files": hashlib.sha256(json.dumps(before_work, sort_keys=True).encode()).hexdigest()
+                if mode != "soft" else None}
         # Detect concurrent writes, including newly created obstructing files.
         current_index = index_path.read_bytes() if index_path.exists() else None
         current_work = inventory(root, names, max_copy_mib * 1024 * 1024, max_files) if mode != "soft" else {}
@@ -393,3 +425,22 @@ def preview(repo, target="HEAD", mode="mixed", max_copy_mib=256, max_files=20000
                 config(root) != settings or attr_snapshot(attributes) != attribute_bytes):
             raise PreviewError("The repository changed during the preview. No result was published; try again.")
         return result
+
+
+def compare_preview(repo, target="HEAD", mode="mixed", max_copy_mib=256, max_files=20000):
+    """Compare three independent simulations; reject detected state changes."""
+    if mode not in ("soft", "mixed", "hard"):
+        raise PreviewError("Supported reset modes: soft, mixed, hard.")
+    reports = {choice: preview(repo, target, choice, max_copy_mib, max_files)
+               for choice in ("mixed", "soft", "hard")}
+    if (len({r["snapshot"]["repository_state"] for r in reports.values()}) != 1 or
+            reports["mixed"]["snapshot"]["working_files"] != reports["hard"]["snapshot"]["working_files"]):
+        raise PreviewError("The repository changed between mode previews. Try again.")
+    result = reports[mode]
+    result["mode_comparison"] = [{
+        "mode": choice, "index_changes": len(r["index_changes"]),
+        "working_tree_changes": len(r["working_tree_changes"]),
+        "local_work_paths": len(r["local_work_paths"]),
+        "commits_removed_from_current_history": r["commits_removed_from_current_history"]}
+        for choice, r in sorted(reports.items(), key=lambda item: ("soft", "mixed", "hard").index(item[0]))]
+    return result
