@@ -12,8 +12,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from gitimpact.cli import main
-from gitimpact.core import PreviewError, git_env, index_entries, preview
+from gitimpact.cli import demo_report, main
+from gitimpact.core import PreviewError, compare_preview, git_env, index_entries, preview
 from gitimpact.report import html_report
 
 
@@ -125,6 +125,78 @@ class PreviewTests(unittest.TestCase):
         self.assertEqual(0, report["commits_removed_from_current_history"])
         self.assertIn("draft.txt", {c["path"] for c in report["working_tree_changes"]})
 
+    def test_local_work_distinguishes_staged_unstaged_and_committed_versions(self):
+        self.setup_versions()
+        report = self.assert_matches_git("hard")
+        staged = {c["path"]: c["local_work"] for c in report["index_changes"]}
+        disk = {c["path"]: c["local_work"] for c in report["working_tree_changes"]}
+        self.assertEqual(["staged changes replaced"], staged["code.py"])
+        self.assertEqual(["unstaged changes replaced"], disk["code.py"])
+        self.assertEqual(["staged content on disk replaced"], disk["draft.txt"])
+        self.assertEqual([], staged["new.txt"])
+        self.assertEqual([], disk["new.txt"])
+        self.assertEqual(["code.py", "draft.txt"], report["local_work_paths"])
+
+    def test_clean_committed_changes_are_not_local_work(self):
+        r = self.repo
+        r.write("file.txt", "first\n")
+        r.commit("first")
+        r.write("file.txt", "second\n")
+        r.commit("second")
+        report = self.assert_matches_git("hard")
+        self.assertTrue(report["working_tree_changes"])
+        self.assertEqual([], report["local_work_paths"])
+
+    def test_staged_version_already_equal_to_target_is_not_replaced(self):
+        r = self.repo
+        r.write("file.txt", "first\n")
+        r.commit("first")
+        r.write("file.txt", "second\n")
+        r.commit("second")
+        r.write("file.txt", "first\n")
+        r.run("add", "file.txt")
+        report = self.assert_matches_git("hard")
+        self.assertEqual([], report["local_work_paths"])
+
+    def test_local_deletion_restored_is_labeled_without_claiming_lost_content(self):
+        self.setup_versions()
+        (self.repo.root / "keep.txt").unlink()
+        report = self.assert_matches_git("hard", "HEAD")
+        change = next(c for c in report["working_tree_changes"] if c["path"] == "keep.txt")
+        self.assertEqual(["local deletion replaced"], change["local_work"])
+
+    def test_mode_comparison_preserves_source_and_distinguishes_staging_from_disk(self):
+        self.setup_versions()
+        before = self.repo.files(metadata=True)
+        report = compare_preview(self.repo.root, "HEAD~1", "hard")
+        self.assertEqual(before, self.repo.files(metadata=True))
+        self.assertEqual([("soft", 0, 0, 0), ("mixed", 3, 0, 2), ("hard", 3, 3, 2)],
+                         [(r["mode"], r["index_changes"], r["working_tree_changes"], r["local_work_paths"])
+                          for r in report["mode_comparison"]])
+
+    def test_mode_comparison_rejects_edit_between_simulations(self):
+        self.setup_versions()
+        import gitimpact.core as core
+        original = core.preview
+        def editing_preview(*args, **kwargs):
+            result = original(*args, **kwargs)
+            if args[2] == "mixed":
+                self.repo.write("code.py", "edit between previews\n")
+            return result
+        with patch.object(core, "preview", side_effect=editing_preview):
+            with self.assertRaisesRegex(PreviewError, "between mode previews"):
+                compare_preview(self.repo.root, "HEAD~1", "hard")
+
+    def test_demo_exposes_obstruction_omitted_from_native_diffs(self):
+        report = demo_report()
+        obstruction = next(c for c in report["working_tree_changes"] if c["path"] == "output/local-export.csv")
+        self.assertEqual(["untracked obstruction replaced"], obstruction["local_work"])
+        self.assertIn("-LOCAL-DRAFT,118.00", obstruction["diff"])
+        for item in report["native_git_demo"][:2]:
+            self.assertNotIn("output/local-export.csv", item["output"])
+        self.assertIn("output/local-export.csv", report["native_git_demo"][2]["output"])
+        self.assertNotIn("notes.txt", {c["path"] for c in report["working_tree_changes"]})
+
     def test_hard_reset_replaces_untracked_file_obstructing_directory(self):
         r = self.repo
         r.write("dir/item.txt", "restore me\n")
@@ -135,6 +207,7 @@ class PreviewTests(unittest.TestCase):
         r.write("dir", "untracked obstruction\n")
         report = self.assert_matches_git("hard")
         self.assertFalse(next(c["was_tracked"] for c in report["working_tree_changes"] if c["path"] == "dir"))
+        self.assertIn("dir", report["local_work_paths"])
 
     def test_hard_reset_replaces_ignored_directory_obstructing_file(self):
         r = self.repo
@@ -181,6 +254,7 @@ class PreviewTests(unittest.TestCase):
         r.commit("base")
         report = self.assert_matches_git("hard", "HEAD")
         self.assertEqual([], report["working_tree_changes"])
+        self.assertEqual([], report["local_work_paths"])
         self.assertEqual(b"hello\n", (r.root / "file.txt").read_bytes())
 
     def test_detached_head(self):

@@ -7,13 +7,23 @@ def terminal(report, show_diff=False):
     lines = ["GIT IMPACT", report["command"], "",
              f"{report['branch']}: {report['head_before'][:8]} -> {report['head_after'][:8]}",
              f"{report['commits_removed_from_current_history']} commit(s) leave the current history.", ""]
+    lines.append(f"LOCAL WORK / {len(report.get('local_work_paths', []))} affected path(s), counted once across index and disk")
+    lines.append("Staging changes are not necessarily lost content. See separate versions below.")
+    lines.append("")
+    if report.get("mode_comparison"):
+        lines.append("SAME TARGET / index changes | disk changes | local work paths")
+        for row in report["mode_comparison"]:
+            lines.append(f"  {row['mode']:5} {row['index_changes']:5} | {row['working_tree_changes']:5} | {row['local_work_paths']:5}")
+        lines.append("Soft preserves index and disk; mixed preserves disk; hard resets both.")
+        lines.append("")
     for label, key in (("STAGING AREA", "index_changes"), ("WORKING TREE", "working_tree_changes")):
         changes = report[key]
         lines.append(f"{label} / {len(changes)} file(s)")
         if not changes:
             lines.append("  Unchanged")
         for change in changes:
-            tag = " [untracked obstruction]" if key == "working_tree_changes" and not change["was_tracked"] and change["before"] else ""
+            labels = change.get("local_work", [])
+            tag = " [" + "; ".join(labels or ["target version change"]) + "]"
             lines.append(f"  {change['kind']:8} {change['path']!r}{tag}")
             if show_diff:
                 lines.extend("    " + line for line in change["diff"].splitlines())
@@ -34,11 +44,13 @@ CSS = """
 .eyebrow{color:var(--muted);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-top:40px}h1{font-size:clamp(30px,5vw,46px);line-height:1.12;letter-spacing:-1.9px;margin:13px 0 16px;max-width:800px}
 .intro{color:var(--muted);max-width:730px;margin:0 0 24px}.command{background:var(--ink);color:#f5f6e9;border-radius:12px;padding:20px 24px;overflow:auto;font:16px/1.5 ui-monospace,Consolas,monospace}.command span{color:#b4c590;margin-right:15px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:23px 0 30px}.stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:19px 22px}.number{display:block;font-size:31px;line-height:1.2;font-weight:650;letter-spacing:-1px}.label{font-size:12px;color:var(--muted)}
+.local{background:#fff5e8;border:1px solid #ecd4b2;border-radius:12px;padding:18px 22px;margin:22px 0}.local p{margin:6px 0;font-size:13px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px;background:white}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--muted);font-size:12px}tr:last-child td{border:0}.selected{background:#eef3e5}.native{margin:12px 0}.native p{padding:0 18px;font-size:13px;color:var(--muted)}
+.demo-banner{display:flex;flex-wrap:wrap;align-items:center;gap:15px;margin-top:20px;font-size:13px}.demo-banner a{color:var(--green);font-weight:650;text-underline-offset:3px}
 .meta{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:16px 0 26px}code{font-family:ui-monospace,Consolas,monospace}.meta code{color:var(--ink)}
 .tabs{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}button{font:inherit;font-size:12px;border:1px solid var(--line);background:transparent;color:var(--muted);padding:8px 13px;border-radius:7px;cursor:pointer}button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:white}button:focus-visible,summary:focus-visible{outline:3px solid #95ab65;outline-offset:3px}
 .section{margin:25px 0}h2{font-size:18px;letter-spacing:-.3px;margin:0 0 3px}.description{color:var(--muted);font-size:13px;margin:0 0 14px}.change{background:#fff;border:1px solid var(--line);border-radius:10px;margin:9px 0;overflow:hidden}summary{display:flex;align-items:center;gap:13px;padding:15px 18px;cursor:pointer;list-style:none}summary::-webkit-details-marker{display:none}summary:before{content:'+';font:18px ui-monospace,monospace;color:var(--muted)}details[open] summary:before{content:'−'}.path{flex:1;overflow-wrap:anywhere;font:13px/1.5 ui-monospace,Consolas,monospace}.kind{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;padding:3px 7px;border-radius:4px;background:#edf0e5;white-space:nowrap}.kind.deleted{background:#f9e7df;color:#a34b30}.kind.modified{background:#f7eed4;color:#8b6c20}.obstruction{font-size:10px;color:#a34b30;font-weight:700}
 pre{margin:0;padding:18px 22px;border-top:1px solid var(--line);background:#f2f4ee;overflow:auto;font:12px/1.7 ui-monospace,Consolas,monospace;tab-size:4;max-height:480px}.empty{border:1px dashed var(--line);padding:16px 20px;border-radius:8px;color:var(--muted);font-size:13px}.commits{padding:15px 20px;background:#fff;border:1px solid var(--line);border-radius:10px;font-size:13px}.commit{margin:7px 0;overflow-wrap:anywhere}.commit code{color:var(--green);margin-right:12px}.notes{border-top:1px solid var(--line);margin-top:34px;padding-top:22px;font-size:12px;color:var(--muted)}.notes p{margin:6px 0}.footer{margin-top:20px;font-size:11px;color:var(--muted)}[hidden]{display:none!important}
-@media(max-width:600px){.wrap{padding:22px 18px}.stats{gap:8px}.stat{padding:13px}.number{font-size:26px}summary{gap:8px;padding:13px}.badge{font-size:9px}.obstruction{display:none}.command{font-size:13px;padding:16px}.top{align-items:flex-start}}
+@media(max-width:600px){.wrap{padding:22px 18px}.stats{gap:8px}.stat{padding:13px}.number{font-size:26px}summary{gap:8px;padding:13px;flex-wrap:wrap}.path{min-width:180px}.obstruction{flex-basis:100%;padding-left:22px}.badge{font-size:9px}.command{font-size:13px;padding:16px}.top{align-items:flex-start}}
 @media(prefers-reduced-motion:no-preference){button{transition:background .12s}}
 """
 
@@ -51,11 +63,12 @@ def html_report(report):
     for category, title, description, key in specs:
         cards = []
         for change in report[key]:
-            obstruction = key == "working_tree_changes" and not change["was_tracked"] and change["before"]
-            tag = '<span class="obstruction">UNTRACKED OBSTRUCTION</span>' if obstruction else ""
+            labels = change.get("local_work", [])
+            tag = '<span class="obstruction">' + e("; ".join(labels)) + '</span>' if labels else ""
             cards.append(f'<details class="change"><summary><span class="path">{e(change["path"])}</span>{tag}'
                          f'<span class="kind {e(change["kind"])}">{e(change["kind"])}</span></summary>'
-                         f'<pre>{e(change["diff"])}</pre></details>')
+                         '<pre>' + e(change["diff"]).replace('\n \n', '\n&#32;\n') + '</pre>'
+                         + ('' if labels else '<p class="description" style="padding:0 18px">Target version change; no local work identified in this changed version.</p>') + '</details>')
         content = "".join(cards) or '<div class="empty">Unchanged by this command.</div>'
         sections.append(f'<section class="section" data-category="{category}"><h2>{title}</h2>'
                         f'<p class="description">{description}</p>{content}</section>')
@@ -70,19 +83,34 @@ def html_report(report):
     sections.append('<section class="section" data-category="history"><h2>Current history</h2>'
                     '<p class="description">These commits leave this branch’s history. Other refs or the reflog may retain them.</p>' + commits + '</section>')
     notes = "".join('<p>' + e(note) + '</p>' for note in report["notes"])
-    stats = [(len(report["index_changes"]), "staged files change"),
+    stats = [(len(report["index_changes"]), "index entries change"),
              (len(report["working_tree_changes"]), "files on disk change"), (count, "commits leave history")]
     stats_html = "".join(f'<div class="stat"><span class="number">{number}</span><span class="label">{label}</span></div>' for number, label in stats)
+    local_count = len(report.get("local_work_paths", []))
+    local_html = f'<aside class="local"><h2>{local_count} path(s) with local work affected</h2><p>Each path is counted once across staging and disk. Labels below distinguish staged changes, unstaged changes, and untracked obstructions from target version changes.</p><p>A change to staging does not necessarily lose the file on disk. Committed versions and staged objects may remain recoverable; this is not a claim of permanent loss.</p></aside>'
+    comparison = ''
+    if report.get("mode_comparison"):
+        rows = ''.join(f'<tr class="{"selected" if row["mode"] == report["mode"] else ""}"><td><code>--{e(row["mode"])}</code></td><td>{row["index_changes"]}</td><td>{row["working_tree_changes"]}</td><td>{row["local_work_paths"]}</td></tr>' for row in report["mode_comparison"])
+        comparison = '<section class="section"><h2>Same target, three reset modes</h2><p class="description">Actual simulations of this observed state. All three move HEAD to the same target. Soft preserves staging and disk; mixed preserves disk; hard resets both. Choose according to your intent.</p><div class="table-wrap"><table><thead><tr><th>Mode</th><th>Index changes</th><th>Disk changes</th><th>Local work paths</th></tr></thead><tbody>' + rows + '</tbody></table></div></section>'
+    native = '<section class="section"><h2>Why not git diff?</h2><p class="description"><code>git diff</code> compares the index and working tree. <code>git diff --cached</code> (or <code>--staged</code>) compares HEAD and the index. Supply the target commit to compare against it. These are useful native tools; Git Impact combines the proposed reset’s effects on staging, disk, obstructions, and history in one report.</p>'
+    if report.get("native_git_demo"):
+        native += '<p class="description">In this synthetic example, <code>output</code> was a committed file at the target but is now an untracked directory. Hard reset replaces it, including <code>output/local-export.csv</code>. The diffs show the target file but omit the untracked CSV’s content. <code>notes.txt</code> is also untracked and stays unchanged.</p>'
+        for item in report["native_git_demo"]:
+            native += f'<details class="change native"><summary><span class="path">{e(item["command"])}</span></summary><p>{e(item["explanation"])}</p><pre>{e(item["output"])}</pre></details>'
+    native += '</section>'
+    demo_banner = '<div class="demo-banner"><span>Synthetic demo · no personal repository data</span><a href="https://github.com/yotam1001/git-impact/releases/latest">Download Git Impact</a><a href="https://github.com/yotam1001/git-impact">Source &amp; instructions</a></div>' if report.get("native_git_demo") else ''
     return f'''<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
 <title>Git Impact · {e(report["command"])}</title><style>{CSS}</style></head>
 <body><main class="wrap"><header class="top"><div class="brand"><b aria-hidden="true">↗</b>Git Impact</div><span class="badge">READ-ONLY PREVIEW</span></header>
+{demo_banner}
 <div class="eyebrow">{e(report["repository"])} / command preview</div><h1>Know what changes.<br>Before you run it.</h1>
 <p class="intro">Git ran this command in a temporary sandbox. Your source repository was left unchanged. Review the effects on each part of your repository below.</p>
 <div class="command"><span aria-hidden="true">$</span>{e(report["command"])}</div>
 <div class="stats">{stats_html}</div><div class="meta"><span>Branch <code>{e(report["branch"])}</code></span><span>HEAD <code>{e(report["head_before"][:8])} → {e(report["head_after"][:8])}</code></span><span>Reset mode <code>{e(report["mode"])}</code></span></div>
+{local_html}{comparison}
 <nav class="tabs" aria-label="Report sections"><button type="button" data-view="all" aria-pressed="true">All effects</button><button type="button" data-view="staging" aria-pressed="false">Staging area</button><button type="button" data-view="working" aria-pressed="false">Working tree</button><button type="button" data-view="history" aria-pressed="false">History</button></nav>
-{''.join(sections)}<aside class="notes"><p><strong>Read the preview against the current state.</strong></p>{notes}</aside>
+{''.join(sections)}{native}<aside class="notes"><p><strong>Read the preview against the current state.</strong></p>{notes}</aside>
 <footer class="footer">Generated locally with Git Impact {e(report["version"])} · No account, API, or hosted service.</footer></main>
 <script>document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{{document.querySelectorAll('[data-view]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));document.querySelectorAll('[data-category]').forEach(s=>s.hidden=button.dataset.view!=='all'&&s.dataset.category!==button.dataset.view)}}));</script></body></html>'''

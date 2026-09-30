@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "git-impact"
-version = "0.1.0"
+version = "0.2.0"
 description = "Preview Git reset effects on staged files, working files, and history without changing your repository"
 requires-python = ">=3.10"
 license = {text = "MIT"}

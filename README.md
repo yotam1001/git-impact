@@ -16,7 +16,7 @@ Open the [live example report](https://yotam1001.github.io/git-impact/) to see t
 
 ## Try the demo
 
-The demo creates a disposable sample repository containing a staged draft, a newer unstaged edit, and an untracked note. It previews a hard reset and removes the sample repository afterward.
+The demo creates a disposable sample repository containing a staged draft, a newer unstaged edit, and an untracked export directory obstructing a target file. It compares all three reset modes, shows native Git command output alongside the report, and removes the sample repository afterward. An unrelated untracked note stays unchanged.
 
 ```powershell
 .\git-impact.exe demo --html demo.html
@@ -38,6 +38,7 @@ From inside a repository:
 git-impact reset --hard HEAD~1
 git-impact reset --mixed HEAD~2 --diff
 git-impact reset --soft main --json
+git-impact reset --hard HEAD~1 --compare-modes
 ```
 
 Use `git-impact.exe` or `./git-impact` when the executable is not on PATH. From the source checkout, replace `git-impact` with `python -m gitimpact` and pass `--repo` to inspect another repository:
@@ -48,7 +49,7 @@ python -m gitimpact reset --hard HEAD~1 --repo ../my-app --html preview.html
 
 Choose an HTML path **outside the inspected repository**. Existing report files are never overwritten. Omitting the reset mode uses `--mixed`, like Git itself.
 
-Example output:
+Example output (abridged):
 
 ```text
 GIT IMPACT
@@ -57,21 +58,26 @@ git reset --hard HEAD~1
 feature/invoices: <current> -> <target>
 1 commit(s) leave the current history.
 
-STAGING AREA / 3 file(s)
-  deleted  'src/draft.py'
-  deleted  'src/export.py'
-  modified 'src/invoice.py'
+LOCAL WORK / 4 affected path(s), counted once across index and disk
+Staging changes are not necessarily lost content. See separate versions below.
 
-WORKING TREE / 4 file(s)
-  modified 'README.md'
-  deleted  'src/draft.py'
-  deleted  'src/export.py'
-  modified 'src/invoice.py'
+SAME TARGET / index changes | disk changes | local work paths
+  soft      0 |     0 |     0
+  mixed     4 |     0 |     2
+  hard      4 |     6 |     4
+
+WORKING TREE / 6 file(s)
+  modified 'README.md' [unstaged changes replaced]
+  created  'output' [target version change]
+  deleted  'output/local-export.csv' [untracked obstruction replaced]
+  deleted  'src/draft.py' [staged content on disk replaced]
+  deleted  'src/export.py' [target version change]
+  modified 'src/invoice.py' [unstaged changes replaced]
 
 Source repository unchanged. This command was run only in a temporary sandbox.
 ```
 
-The HTML report contains expandable before/after diffs and filters for staging, working files, and history. It is a self-contained offline file. Reports include changed file contents and names; review them before sharing.
+The HTML report contains expandable before/after diffs and filters for staging, working files, and history. Labels distinguish changes to local work from changes to committed versions. The local-work count includes each affected path once, even if both its staged version and disk version change. A replaced local deletion is a change to your intended state, not lost file content. Reports are self-contained offline files and include changed file contents and names; review them before sharing.
 
 ## What each mode does
 
@@ -82,6 +88,16 @@ The HTML report contains expandable before/after diffs and filters for staging, 
 | `--hard` | Moves to the target | Reset to target versions | Reset to target versions; obstructing untracked files may be overwritten |
 
 Git Impact shows staged and unstaged versions separately. It also identifies untracked obstructions affected by a hard reset. Unrelated untracked files are not deleted by reset. Commits leaving one branch's history may remain in other refs or the reflog; the tool does not call them permanently lost. See the [Git reset documentation](https://git-scm.com/docs/git-reset).
+
+Add `--compare-modes` to simulate all three modes against the same target and show their actual file counts. Each simulation checks the source remains unchanged; comparisons also reject detected changes between their observed snapshots. Comparison takes longer and copies relevant files even when the selected mode is soft. Mixed preserves disk content but replaces staging, including a staged version that may differ from the disk version. It is useful when that matches your intent, rather than a substitute for every hard reset.
+
+## Why not git diff?
+
+Native Git is sufficient for many workflows. `git diff` compares the index with the working tree; `git diff --cached` (or `--staged`) compares HEAD with the index. For a proposed reset to another commit, `git diff --cached <target>` compares the index with that target, and `git diff <target>` compares tracked working content with the target. See the [Git diff documentation](https://git-scm.com/docs/git-diff).
+
+These diffs do not show ordinary untracked file contents. `git ls-files --others --exclude-standard` lists non-ignored untracked paths; ignored obstructions need consideration too. Git Impact runs the reset in a sandbox to identify which relevant obstructions actually change and presents their before/after contents alongside staging effects and commits leaving the current history.
+
+The [live demo](https://yotam1001.github.io/git-impact/) makes this concrete: the target has an `output` file, while the current repository has an untracked `output/local-export.csv`. Hard reset replaces that directory and its CSV. The native diffs show the target file but omit the CSV’s content. The report includes it and distinguishes it from an unrelated untracked `notes.txt` that survives. If you prefer using native commands directly, the demo includes their output too.
 
 ## How the preview works
 
@@ -95,7 +111,7 @@ Soft reset avoids copying working files. Mixed and hard resets copy tracked file
 
 ## Current scope
 
-Version 0.1 previews **reset to a local commit/ref**, with all three modes. It never applies a command to your source repository and does not provide an apply button. Path-specific reset, `--merge`, `--keep`, other Git commands, and arbitrary shell command strings are not accepted.
+Version 0.2 previews **reset to a local commit/ref**, with all three modes. It never applies a command to your source repository and does not provide an apply button. Path-specific reset, `--merge`, `--keep`, other Git commands, and arbitrary shell command strings are not accepted.
 
 Ordinary repositories and linked worktrees are supported. The preview refuses bare or unborn repositories, partial clones, sparse checkout, unmerged entries, skip-worktree/assume-unchanged flags, submodules, symlinks/junctions, nested repository obstructions, case-colliding paths/case-only renames, checkout filters including LFS, and working-tree encoding transforms. Resolve those conditions or use Git directly with an appropriate backup. Git must support `--no-lazy-fetch`, `git var GIT_ATTR_GLOBAL`, and `GIT_ATTR_SYSTEM`; the local Windows build was verified with Git 2.54.
 

@@ -12,10 +12,12 @@ import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from gitimpact import __version__
 
 
 def main():
-    archives = list((ROOT / "dist").glob("*.zip"))
+    archives = list((ROOT / "dist").glob(f"git-impact-{__version__}-*.zip"))
     if not archives:
         raise RuntimeError("Build release archives first.")
     for archive in archives:
@@ -40,15 +42,17 @@ def main():
                     raise RuntimeError("Git must be installed and available on PATH.")
                 env["PATH"] = str(Path(git).parent) + os.pathsep + str(Path(os.environ["SystemRoot"]) / "System32")
             version = subprocess.run(command + ["--version"], cwd=folder, env=env, capture_output=True, text=True, check=True)
-            if "Git Impact 0.1.0" not in version.stdout:
+            if "Git Impact " + __version__ not in version.stdout:
                 raise RuntimeError("Version mismatch: " + archive.name)
             for mode in ("soft", "mixed", "hard"):
                 result = subprocess.run(command + ["demo", "--" + mode, "--json"], cwd=folder,
                                         env=env, capture_output=True, text=True, check=True, timeout=60)
                 report = json.loads(result.stdout)
-                expected_counts = {"soft": (0, 0), "mixed": (3, 0), "hard": (3, 4)}[mode]
+                expected_counts = {"soft": (0, 0), "mixed": (4, 0), "hard": (4, 6)}[mode]
                 if (len(report["index_changes"]), len(report["working_tree_changes"])) != expected_counts:
                     raise RuntimeError("Demo counts mismatch: " + archive.name + " " + mode)
+                if [r["local_work_paths"] for r in report["mode_comparison"]] != [0, 2, 4]:
+                    raise RuntimeError("Local work comparison mismatch: " + archive.name)
             failure = subprocess.run(command + ["reset", "--repo", str(folder)], cwd=folder,
                                      env=env, capture_output=True, text=True)
             if failure.returncode != 2:
